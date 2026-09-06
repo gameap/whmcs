@@ -1,0 +1,19 @@
+{
+    "schema": "1.0",
+    "type": "whmcs-servers",
+    "name": "gameap",
+    "license": "MIT",
+    "category": "provisioning",
+    "description": {
+        "name": "GameAP",
+        "tagline": "Game server provisioning for the GameAP control panel",
+        "long": "Creates, suspends and removes game servers in GameAP when WHMCS services change state, and gives customers a single sign-on button into the panel."
+    },
+    "authors": [
+        {
+            "name": "GameAP",
+            "homepage": "https://gameap.com"
+        }
+    ],
+    "version": "1.0.0"
+}

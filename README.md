@@ -4,7 +4,7 @@ Provisions game servers in the [GameAP](https://gameap.com) control panel from
 WHMCS. A paid order creates the server, an unpaid one closes access to it, and a
 cancelled one removes it — without an administrator touching the panel.
 
-Русская версия: [README_RU.md](README_RU.md)
+Русская версия: [README_RU.md](README_RU.md) · Deutsche Version: [README_DE.md](README_DE.md) · Versión en español: [README_ES.md](README_ES.md)
 
 ## What it does
 
