@@ -96,12 +96,17 @@ add_hook('DailyCronJob', 1, static function (): void {
  */
 function gameap_reconcileCandidates(): array
 {
-    return Capsule::table('tblhosting')
+    $query = Capsule::table('tblhosting')
         ->join('tblproducts', 'tblproducts.id', '=', 'tblhosting.packageid')
         ->join('tblservers', 'tblservers.id', '=', 'tblhosting.server')
         ->where('tblproducts.servertype', 'gameap')
-        ->whereIn('tblhosting.domainstatus', ['Active', 'Suspended'])
+        ->whereIn('tblhosting.domainstatus', ['Active', 'Suspended']);
+
+    $total = (clone $query)->count();
+
+    return $query
         ->orderBy('tblhosting.id')
+        ->offset(gameap_reconcileOffset($total))
         ->limit(GAMEAP_RECONCILE_LIMIT)
         ->get([
             'tblhosting.id as serviceid',
@@ -116,6 +121,26 @@ function gameap_reconcileCandidates(): array
             'tblservers.accesshash',
         ])
         ->all();
+}
+
+/**
+ * Where today's window starts.
+ *
+ * Ordering by id and always taking the first page would reconcile the same
+ * lowest ids for ever and never reach anything past the limit. Stepping the
+ * window on by a page a day walks the whole list, and does it without the
+ * sweep having to write a cursor back into WHMCS.
+ */
+function gameap_reconcileOffset(int $total): int
+{
+    if ($total <= GAMEAP_RECONCILE_LIMIT) {
+        return 0;
+    }
+
+    $pages = (int) ceil($total / GAMEAP_RECONCILE_LIMIT);
+    $day = intdiv(time(), 86400);
+
+    return ($day % $pages) * GAMEAP_RECONCILE_LIMIT;
 }
 
 function gameap_reconcileService(object $service): ?string
