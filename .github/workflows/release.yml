@@ -1,0 +1,59 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, mbstring, json
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress
+
+      - name: Tests
+        run: vendor/bin/phpunit
+
+      - name: Check the tag matches the declared version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          DECLARED=$(php -r 'echo json_decode(file_get_contents("modules/servers/gameap/whmcs.json"), true)["version"];')
+          if [ "$TAG" != "$DECLARED" ]; then
+            echo "Tag $TAG does not match whmcs.json version $DECLARED" >&2
+            exit 1
+          fi
+          IN_CODE=$(grep -oE "GAMEAP_MODULE_VERSION = '[^']+'" modules/servers/gameap/gameap.php \
+            | grep -oE "[0-9]+\.[0-9]+\.[0-9]+")
+          if [ "$TAG" != "$IN_CODE" ]; then
+            echo "Tag $TAG does not match GAMEAP_MODULE_VERSION $IN_CODE" >&2
+            exit 1
+          fi
+
+      - name: Build the installable archive
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          rm -rf dist && mkdir -p dist/modules/servers
+          cp -r modules/servers/gameap dist/modules/servers/gameap
+          # The MIT terms have to travel with the copy.
+          cp LICENSE dist/LICENSE
+          (cd dist && zip -r "../gameap-whmcs-${VERSION}.zip" modules LICENSE)
+          sha256sum "gameap-whmcs-${VERSION}.zip" > "gameap-whmcs-${VERSION}.zip.sha256"
+
+      - name: Attach it to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" gameap-whmcs-*.zip gameap-whmcs-*.zip.sha256 --clobber

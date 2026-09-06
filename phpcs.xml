@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<ruleset name="gameap-whmcs">
+    <description>PSR-12, minus the rules WHMCS module files cannot satisfy.</description>
+
+    <file>modules</file>
+    <file>tests</file>
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <rule ref="PSR12"/>
+
+    <!-- WHMCS loads these files for their side effects: the direct-access
+         guard has to run before anything is declared, and there is no
+         autoloader to register the library with. -->
+    <rule ref="PSR1.Files.SideEffects">
+        <exclude-pattern>modules/servers/gameap/gameap.php</exclude-pattern>
+        <exclude-pattern>modules/servers/gameap/hooks.php</exclude-pattern>
+        <exclude-pattern>tests/bootstrap.php</exclude-pattern>
+    </rule>
+</ruleset>
