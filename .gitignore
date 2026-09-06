@@ -1,5 +1,4 @@
 /vendor/
 /.phpunit.cache/
-composer.lock
 *.zip
 /.phpunit.result.cache

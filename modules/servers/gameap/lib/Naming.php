@@ -28,8 +28,13 @@ class Naming
             $template = 'whmcs{client_id}';
         }
 
+        $clientId = strtolower(self::slug((string) ($client['id'] ?? $client['userid'] ?? '0')));
+        if ($clientId === '') {
+            $clientId = '0';
+        }
+
         $login = self::render($template, [
-            '{client_id}' => (string) ($client['id'] ?? $client['userid'] ?? '0'),
+            '{client_id}' => $clientId,
             '{first_name}' => self::slug((string) ($client['firstname'] ?? '')),
             '{last_name}' => self::slug((string) ($client['lastname'] ?? '')),
         ]);
@@ -37,10 +42,20 @@ class Naming
         $login = strtolower(preg_replace('/[^A-Za-z0-9._-]/', '', $login) ?? '');
 
         if ($login === '') {
-            $login = 'whmcs' . (string) ($client['id'] ?? '0');
+            $login = 'whmcs' . $clientId;
         }
 
-        return substr($login, 0, self::LOGIN_MAX_LENGTH);
+        if (strlen($login) <= self::LOGIN_MAX_LENGTH) {
+            return $login;
+        }
+
+        // Cutting the tail off would give every client with an over-long
+        // template the same login, and the panel account is resolved by it —
+        // one customer would end up in another customer's account. The id is
+        // the only part that distinguishes them, so it survives the cut.
+        $suffix = substr($clientId, -self::LOGIN_MAX_LENGTH);
+
+        return substr($login, 0, self::LOGIN_MAX_LENGTH - strlen($suffix)) . $suffix;
     }
 
     /**

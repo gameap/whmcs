@@ -36,6 +36,7 @@ class PlacementTest extends TestCase
 
         $this->assertSame(2, $nodes[0]['id']);
         $this->assertSame(1, $nodes[1]['id']);
+        $this->assertCount(2, $this->http->callsTo('GET', '/api/servers'), 'one load read per node');
     }
 
     public function testSkipsDisabledNodesAndNodesOutsideThePool(): void

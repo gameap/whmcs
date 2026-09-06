@@ -58,12 +58,28 @@ class Placement
             );
         }
 
-        usort($candidates, function (array $left, array $right): int {
-            $byLoad = $this->serverCount((int) $left['id']) <=> $this->serverCount((int) $right['id']);
+        if (count($candidates) === 1) {
+            return $candidates;
+        }
+
+        // One request per node, read before the sort: usort asks about the
+        // same node several times, and each comparison used to be its own
+        // round trip to the panel.
+        $load = [];
+        foreach ($candidates as $candidate) {
+            $nodeId = (int) $candidate['id'];
+            $load[$nodeId] ??= $this->serverCount($nodeId);
+        }
+
+        usort($candidates, static function (array $left, array $right) use ($load): int {
+            $leftId = (int) $left['id'];
+            $rightId = (int) $right['id'];
+
+            $byLoad = $load[$leftId] <=> $load[$rightId];
 
             // Ties break on id so placement is reproducible, which matters
             // when an order fails and an administrator retries it.
-            return $byLoad !== 0 ? $byLoad : ((int) $left['id'] <=> (int) $right['id']);
+            return $byLoad !== 0 ? $byLoad : ($leftId <=> $rightId);
         });
 
         return $candidates;

@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -46,7 +48,9 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           rm -rf dist && mkdir -p dist/modules/servers
           cp -r modules/servers/gameap dist/modules/servers/gameap
-          (cd dist && zip -r "../gameap-whmcs-${VERSION}.zip" modules)
+          # The MIT terms have to travel with the copy.
+          cp LICENSE dist/LICENSE
+          (cd dist && zip -r "../gameap-whmcs-${VERSION}.zip" modules LICENSE)
           sha256sum "gameap-whmcs-${VERSION}.zip" > "gameap-whmcs-${VERSION}.zip.sha256"
 
       - name: Attach it to the release

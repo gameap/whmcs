@@ -28,6 +28,7 @@ if (!function_exists('gameap_MetaData')) {
 
 use WHMCS\Database\Capsule;
 use WHMCS\Module\Server\Gameap\Config;
+use WHMCS\Module\Server\Gameap\ModuleException;
 use WHMCS\Module\Server\Gameap\Provisioner;
 use WHMCS\Module\Server\Gameap\ServiceState;
 
@@ -48,12 +49,28 @@ add_hook('DailyCronJob', 1, static function (): void {
     }
 
     $fixed = 0;
+    $skipped = 0;
     $problems = [];
+    $unreachable = [];
 
     foreach ($services as $service) {
+        $panelServer = (int) $service->serverid;
+
+        // A panel that is down answers every service on it with the same
+        // connect timeout, and 500 of those would outlast the cron run.
+        if (isset($unreachable[$panelServer])) {
+            $skipped++;
+
+            continue;
+        }
+
         try {
             $note = gameap_reconcileService($service);
         } catch (Throwable $throwable) {
+            if ($throwable instanceof ModuleException && $throwable->errorCode() === ModuleException::CODE_TRANSPORT) {
+                $unreachable[$panelServer] = true;
+            }
+
             $problems[] = 'service #' . $service->serviceid . ': ' . $throwable->getMessage();
 
             continue;
@@ -67,7 +84,8 @@ add_hook('DailyCronJob', 1, static function (): void {
 
     if ($problems !== []) {
         gameap_reconcileLog(
-            'checked ' . count($services) . ' services, corrected ' . $fixed,
+            'checked ' . (count($services) - $skipped) . ' services, corrected ' . $fixed
+                . ($skipped > 0 ? ', skipped ' . $skipped . ' on unreachable servers' : ''),
             implode('; ', array_slice($problems, 0, 50))
         );
     }
@@ -89,6 +107,7 @@ function gameap_reconcileCandidates(): array
             'tblhosting.id as serviceid',
             'tblhosting.userid',
             'tblhosting.packageid',
+            'tblhosting.server as serverid',
             'tblhosting.domainstatus',
             'tblservers.hostname',
             'tblservers.secure',

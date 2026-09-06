@@ -300,12 +300,18 @@ function gameap_ServiceSingleSignOn(array $params): array
         $serverId = $state->serverId();
         $redirect = $serverId > 0 ? '/servers/' . $serverId : '/';
 
-        $ticket = gameap_panel($params)->issueSsoTicket($userId, $redirect);
+        $ticket = (string) (gameap_panel($params)->issueSsoTicket($userId, $redirect)['ticket'] ?? '');
+
+        // Without this the customer would be sent to an empty /sso#t= and see
+        // the panel's login form, with nothing in WHMCS saying why.
+        if ($ticket === '') {
+            return ['success' => false, 'errorMsg' => 'GameAP did not issue a sign-on ticket. Please try again.'];
+        }
 
         // The ticket goes in the fragment: fragments are not sent to the
         // server, so it stays out of the panel's access logs and out of the
         // Referer header. The panel's /sso page reads it from there.
-        $url = gameap_baseUrl($params) . '/sso#t=' . rawurlencode((string) ($ticket['ticket'] ?? ''));
+        $url = gameap_baseUrl($params) . '/sso#t=' . rawurlencode($ticket);
 
         return ['success' => true, 'redirectTo' => $url];
     } catch (Throwable $throwable) {

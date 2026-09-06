@@ -40,6 +40,29 @@ class NamingTest extends TestCase
         $this->assertLessThanOrEqual(40, strlen($login));
     }
 
+    public function testBoundedLoginsStayUniquePerClient(): void
+    {
+        // Both templates overflow the bound: one puts the id where the cut
+        // lands, the other never mentions it. Either way two clients must not
+        // end up sharing a panel account.
+        $templates = [
+            'id past the bound' => str_repeat('a', 200) . '{client_id}',
+            'no id in the template' => '{first_name}',
+        ];
+        $client = ['firstname' => str_repeat('Ann', 40)];
+
+        foreach ($templates as $label => $template) {
+            $first = Naming::login($template, ['id' => 1] + $client);
+            $second = Naming::login($template, ['id' => 2] + $client);
+
+            $this->assertNotSame($first, $second, $label);
+            $this->assertStringEndsWith('1', $first, $label);
+            $this->assertStringEndsWith('2', $second, $label);
+            $this->assertLessThanOrEqual(40, strlen($first), $label);
+            $this->assertLessThanOrEqual(40, strlen($second), $label);
+        }
+    }
+
     public function testServerNameSubstitutesPlaceholders(): void
     {
         $name = Naming::serverName('{game} for {client_name} #{service_id}', [

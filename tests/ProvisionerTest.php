@@ -412,12 +412,14 @@ class ProvisionerTest extends TestCase
     {
         [$provisioner] = $this->provisioner(['configoption8' => '28000-27000']);
 
-        $this->expectException(ModuleException::class);
-        $this->expectExceptionMessage('Port range');
+        try {
+            $provisioner->create();
+            $this->fail('expected a config error');
+        } catch (ModuleException $exception) {
+            $this->assertStringContainsString('Port range', $exception->getMessage());
+        }
 
-        $provisioner->create();
-
-        $this->assertSame([], $this->http->calls);
+        $this->assertSame([], $this->http->calls, 'the product is validated before the panel is contacted');
     }
 
     // -----------------------------------------------------------------
